@@ -1,0 +1,37 @@
+import axios from 'axios';
+
+const BASE = import.meta.env.VITE_API_URL || '/api';
+
+const api = axios.create({
+  baseURL: BASE,
+  timeout: 15000,
+});
+
+export const fetchQuote = (symbol) =>
+  api.get(`/stocks/${symbol}`).then((r) => r.data.data);
+
+export const fetchHistory = (symbol, from, to) =>
+  api.get(`/stocks/${symbol}/history`, { params: { from, to } }).then((r) => r.data.data);
+
+export const fetchBatch = (symbols) =>
+  api.post('/stocks/batch', { symbols }).then((r) => r.data.data);
+
+export const fetchFundamentals = (symbol) =>
+  api.get(`/fundamentals/${symbol}`).then((r) => r.data.data);
+
+export const fetchPeers = (symbol) =>
+  api.get(`/fundamentals/${symbol}/peers`).then((r) => r.data.data);
+
+export const fetchIndices = () =>
+  api.get('/indices').then((r) => r.data.data);
+
+export const fetchGainers = () =>
+  api.get('/market/gainers').then((r) => r.data.data);
+
+export const fetchLosers = () =>
+  api.get('/market/losers').then((r) => r.data.data);
+
+export const searchStocks = (q) =>
+  api.get('/search', { params: { q } }).then((r) => r.data.data);
+
+export default api;
