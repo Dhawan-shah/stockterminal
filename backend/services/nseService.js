@@ -15,29 +15,59 @@ async function getQuote(symbol) {
 
   for (const suffix of suffixes) {
     try {
-      const q = await yahooFinance.quote(`${symbol}${suffix}`, {}, { validateResult: false });
-      if (!q || !q.regularMarketPrice) continue;
+      // Fetch both quote and quoteSummary in parallel for full data
+      const [q, summary] = await Promise.allSettled([
+        yahooFinance.quote(`${symbol}${suffix}`, {}, { validateResult: false }),
+        yahooFinance.quoteSummary(`${symbol}${suffix}`, {
+          modules: ['financialData', 'defaultKeyStatistics', 'summaryDetail'],
+        }, { validateResult: false }),
+      ]);
+
+      const quote = q.status === 'fulfilled' ? q.value : null;
+      if (!quote || !quote.regularMarketPrice) continue;
+
+      const fin = summary.status === 'fulfilled' ? summary.value?.financialData : null;
+      const stats = summary.status === 'fulfilled' ? summary.value?.defaultKeyStatistics : null;
+      const detail = summary.status === 'fulfilled' ? summary.value?.summaryDetail : null;
 
       const result = {
         symbol,
-        name: q.longName || q.shortName || symbol,
+        name: quote.longName || quote.shortName || symbol,
         exchange: suffix === '.NS' ? 'NSE' : 'BSE',
-        ltp: q.regularMarketPrice || 0,
-        open: q.regularMarketOpen || 0,
-        high: q.regularMarketDayHigh || 0,
-        low: q.regularMarketDayLow || 0,
-        close: q.regularMarketPreviousClose || 0,
-        change: q.regularMarketChange || 0,
-        changePct: q.regularMarketChangePercent || 0,
-        volume: q.regularMarketVolume || 0,
-        marketCap: q.marketCap || null,
-        weekHigh52: q.fiftyTwoWeekHigh || 0,
-        weekLow52: q.fiftyTwoWeekLow || 0,
+        ltp: quote.regularMarketPrice || 0,
+        open: quote.regularMarketOpen || 0,
+        high: quote.regularMarketDayHigh || 0,
+        low: quote.regularMarketDayLow || 0,
+        close: quote.regularMarketPreviousClose || 0,
+        change: quote.regularMarketChange || 0,
+        changePct: quote.regularMarketChangePercent || 0,
+        volume: quote.regularMarketVolume || 0,
+        marketCap: quote.marketCap || null,
+        weekHigh52: quote.fiftyTwoWeekHigh || 0,
+        weekLow52: quote.fiftyTwoWeekLow || 0,
         totalBuyQty: 0,
         totalSellQty: 0,
         series: 'EQ',
         isin: '',
-        sector: q.sector || '',
+        sector: quote.sector || fin?.sector || '',
+
+        // Multibagger Engine fields - from quoteSummary for accuracy
+        pe: detail?.trailingPE || quote.trailingPE || null,
+        pb: stats?.priceToBook || null,
+        roe: fin?.returnOnEquity || null,
+        debt: fin?.debtToEquity ? fin.debtToEquity / 100 : null,
+        div: detail?.dividendYield || quote.dividendYield || null,
+        beta: stats?.beta || quote.beta || 1,
+        eps: stats?.trailingEps || quote.trailingEps || null,
+        forwardEps: stats?.forwardEps || null,
+        epsGrowth: fin?.earningsGrowth || null,
+        revenueGrowth: fin?.revenueGrowth || null,
+        grossMargin: fin?.grossMargins || null,
+        operatingMargin: fin?.operatingMargins || null,
+        currentRatio: fin?.currentRatio || null,
+        targetPrice: fin?.targetMeanPrice || null,
+        recommendation: fin?.recommendationKey || null,
+
         timestamp: new Date().toISOString(),
       };
 
@@ -48,7 +78,7 @@ async function getQuote(symbol) {
     }
   }
 
-  throw new Error(`No data found for ${symbol} on NSE or BSE`);
+  throw new Error(`No data found for ${symbol}`);
 }
 
 async function getBatchQuotes(symbols) {
