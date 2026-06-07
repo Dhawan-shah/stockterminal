@@ -34,4 +34,10 @@ export const fetchLosers = () =>
 export const searchStocks = (q) =>
   api.get('/search', { params: { q } }).then((r) => r.data.data);
 
+export const fetchStockNews = (symbol) =>
+  api.get(`/market/news/${symbol}`).then((r) => r.data.data);
+
+export const fetchMacroNews = () =>
+  api.get('/market/macro').then((r) => r.data.data);
+
 export default api;
