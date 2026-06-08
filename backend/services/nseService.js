@@ -15,12 +15,14 @@ async function getQuote(symbol) {
 
   for (const suffix of suffixes) {
     try {
-      // Fetch both quote and quoteSummary in parallel for full data
       const [q, summary] = await Promise.allSettled([
         yahooFinance.quote(`${symbol}${suffix}`, {}, { validateResult: false }),
-        yahooFinance.quoteSummary(`${symbol}${suffix}`, {
-          modules: ['financialData', 'defaultKeyStatistics', 'summaryDetail'],
-        }, { validateResult: false }),
+        Promise.race([
+          yahooFinance.quoteSummary(`${symbol}${suffix}`, {
+            modules: ['financialData', 'defaultKeyStatistics', 'summaryDetail'],
+          }, { validateResult: false }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+        ]),
       ]);
 
       const quote = q.status === 'fulfilled' ? q.value : null;
@@ -51,7 +53,7 @@ async function getQuote(symbol) {
         isin: '',
         sector: quote.sector || fin?.sector || '',
 
-        // Multibagger Engine fields - from quoteSummary for accuracy
+        // Multibagger Engine fields
         pe: detail?.trailingPE || quote.trailingPE || null,
         pb: stats?.priceToBook || null,
         roe: fin?.returnOnEquity || null,
