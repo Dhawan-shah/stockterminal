@@ -11,21 +11,18 @@ const searchRoutes = require('./routes/search');
 const fundamentalsRoutes = require('./routes/fundamentals');
 const marketRoutes = require('./routes/market');
 const indicesRoutes = require('./routes/indices');
+const deepRoutes = require('./routes/deep');
 
 const { startPriceBroadcaster } = require('./services/priceBroadcaster');
 
 const app = express();
 const server = http.createServer(app);
 
-// WebSocket server
 const wss = new WebSocket.Server({ server, path: '/ws' });
-
-// Store subscriptions: symbol -> Set of ws clients
 const subscriptions = new Map();
 
 wss.on('connection', (ws) => {
   ws.subscribedSymbols = new Set();
-
   ws.on('message', (data) => {
     try {
       const msg = JSON.parse(data);
@@ -43,21 +40,16 @@ wss.on('connection', (ws) => {
           if (subscriptions.has(sym)) subscriptions.get(sym).delete(ws);
         });
       }
-    } catch (e) {
-      console.error('WS parse error', e.message);
-    }
+    } catch (e) {}
   });
-
   ws.on('close', () => {
     ws.subscribedSymbols.forEach((sym) => {
       if (subscriptions.has(sym)) subscriptions.get(sym).delete(ws);
     });
   });
-
   ws.send(JSON.stringify({ type: 'connected', message: 'StockTerminal WS ready' }));
 });
 
-// Broadcast price updates to subscribed clients
 const broadcast = (symbol, data) => {
   if (!subscriptions.has(symbol)) return;
   const msg = JSON.stringify({ type: 'price_update', symbol, data });
@@ -66,29 +58,23 @@ const broadcast = (symbol, data) => {
   });
 };
 
-// Start price polling broadcaster
 startPriceBroadcaster(broadcast);
 
-// Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use(express.json());
-app.use(rateLimit({ windowMs: 60 * 1000, max: 200 }));
+app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
 
-// Routes
 app.use('/api/stocks', stockRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/fundamentals', fundamentalsRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/indices', indicesRoutes);
+app.use('/api/deep', deepRoutes);
 
 app.get('/health', (req, res) =>
   res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date() })
 );
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 StockTerminal backend running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 StockTerminal TITAN MODE running on port ${PORT}`));

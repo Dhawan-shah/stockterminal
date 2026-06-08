@@ -4,7 +4,7 @@ const BASE = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: BASE,
-  timeout: 15000,
+  timeout: 20000,
 });
 
 export const fetchQuote = (symbol) =>
@@ -39,5 +39,15 @@ export const fetchStockNews = (symbol) =>
 
 export const fetchMacroNews = () =>
   api.get('/market/macro').then((r) => r.data.data);
+
+// TITAN MODE - Deep data
+export const fetchInsider = (symbol) =>
+  api.get('/deep/insider/' + symbol).then((r) => r.data.data);
+
+export const fetchFinancials = (symbol) =>
+  api.get('/deep/financials/' + symbol).then((r) => r.data.data);
+
+export const fetchProfile = (symbol) =>
+  api.get('/deep/profile/' + symbol).then((r) => r.data.data);
 
 export default api;
