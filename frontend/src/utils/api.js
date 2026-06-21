@@ -40,7 +40,6 @@ export const fetchStockNews = (symbol) =>
 export const fetchMacroNews = () =>
   api.get('/market/macro').then((r) => r.data.data);
 
-// TITAN MODE - Deep data
 export const fetchInsider = (symbol) =>
   api.get('/deep/insider/' + symbol).then((r) => r.data.data);
 
@@ -49,5 +48,15 @@ export const fetchFinancials = (symbol) =>
 
 export const fetchProfile = (symbol) =>
   api.get('/deep/profile/' + symbol).then((r) => r.data.data);
+
+export const fetchAIAnalysis = (symbol, quote, fundamentals) =>
+  api.post('/ai/analyze', { symbol, quote, fundamentals }, { timeout: 35000 }).then((r) => r.data.data);
+
+// Market Screener - full live market scan (fetches every stock fresh + runs AI on top 20)
+export const runMarketScan = () =>
+  api.post('/screener/scan', {}, { timeout: 150000 }).then((r) => r.data.data);
+
+export const getAIPicks = (stocks) =>
+  api.post('/screener/ai-picks', { stocks }, { timeout: 40000 }).then((r) => r.data.data);
 
 export default api;

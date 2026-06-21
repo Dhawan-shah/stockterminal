@@ -13,6 +13,7 @@ const marketRoutes = require('./routes/market');
 const indicesRoutes = require('./routes/indices');
 const deepRoutes = require('./routes/deep');
 const aiRoutes = require('./routes/ai');
+const screenerRoutes = require('./routes/screener');
 
 const { startPriceBroadcaster } = require('./services/priceBroadcaster');
 
@@ -73,6 +74,7 @@ app.use('/api/market', marketRoutes);
 app.use('/api/indices', indicesRoutes);
 app.use('/api/deep', deepRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/screener', screenerRoutes);
 
 app.get('/health', (req, res) =>
   res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date() })
