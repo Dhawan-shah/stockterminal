@@ -219,7 +219,7 @@ async function getAIVerdictsForTop(stocks, groq) {
 // stock fresh from Yahoo Finance and re-runs AI on the top 20.
 router.post('/scan', async (req, res) => {
   try {
-    const stocks = ALL_INDIA_STOCKS.slice(0, 200);
+    const stocks = ALL_INDIA_STOCKS.slice(0, 80);
     const results = [];
     const batchSize = 10;
 
