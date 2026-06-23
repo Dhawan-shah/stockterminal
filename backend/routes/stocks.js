@@ -1,51 +1,44 @@
 const express = require('express');
 const router = express.Router();
-const { getQuote, getBatchQuotes, getHistoricalData, getMarketDepth } = require('../services/nseService');
-const { addSymbol } = require('../services/priceBroadcaster');
+const { getQuote, getQuoteFull, getBatchQuotes, getHistoricalData } = require('../services/nseService');
 
+// Fast quote - returns in <1s from cache or quick Yahoo fetch
 router.get('/:symbol', async (req, res) => {
   try {
-    const symbol = req.params.symbol.toUpperCase();
-    addSymbol(symbol);
-    const quote = await getQuote(symbol);
-    res.json({ success: true, data: quote });
+    const data = await getQuote(req.params.symbol.toUpperCase());
+    res.json({ success: true, data });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-router.get('/:symbol/history', async (req, res) => {
+// Full quote with fundamentals (for multibagger engine)
+router.get('/:symbol/full', async (req, res) => {
   try {
-    const symbol = req.params.symbol.toUpperCase();
-    const { from, to } = req.query;
-    const candles = await getHistoricalData(symbol, from, to);
-    res.json({ success: true, data: candles });
+    const data = await getQuoteFull(req.params.symbol.toUpperCase());
+    res.json({ success: true, data });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-router.get('/:symbol/depth', async (req, res) => {
-  try {
-    const symbol = req.params.symbol.toUpperCase();
-    const depth = await getMarketDepth(symbol);
-    res.json({ success: true, data: depth });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
+// Batch quotes - parallel, returns fast
 router.post('/batch', async (req, res) => {
   try {
     const { symbols } = req.body;
-    if (!symbols || !Array.isArray(symbols)) {
-      return res.status(400).json({ success: false, error: 'symbols array required' });
-    }
-    const quotes = await getBatchQuotes(symbols);
-    const data = symbols.map((symbol) => ({
-      symbol,
-      data: quotes.find((q) => q.symbol === symbol) || null,
-    }));
+    if (!symbols || !symbols.length) return res.json({ success: true, data: [] });
+    const data = await getBatchQuotes(symbols.slice(0, 20));
+    res.json({ success: true, data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Historical candles
+router.get('/:symbol/history', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const data = await getHistoricalData(req.params.symbol.toUpperCase(), from, to);
     res.json({ success: true, data });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });

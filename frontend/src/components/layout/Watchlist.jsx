@@ -1,96 +1,82 @@
-import { useEffect } from 'react';
 import { useStore } from '../../store/useStore';
+import { useEffect, useState } from 'react';
 import { fetchBatch } from '../../utils/api';
 
+function SkeletonRow() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderBottom: '1px solid #0d0d0d' }}>
+      <div style={{ width: 60, height: 10, background: '#1a1a1a', borderRadius: 3, animation: 'skeleton 1.5s infinite' }} />
+      <div style={{ width: 50, height: 10, background: '#1a1a1a', borderRadius: 3, animation: 'skeleton 1.5s infinite' }} />
+    </div>
+  );
+}
+
 export default function Watchlist() {
-  const { watchlist, quotes, updateQuote, activeSymbol, setActiveSymbol } = useStore();
+  const { watchlist, quotes, setQuotes, activeSymbol, setActiveSymbol, setActiveTab } = useStore();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const results = await fetchBatch(watchlist);
-        results.forEach((r) => { if (r.data) updateQuote(r.symbol, r.data); });
-      } catch {}
-    };
-    load();
-    const iv = setInterval(load, 15000);
-    return () => clearInterval(iv);
+    setLoading(true);
+    fetchBatch(watchlist).then((data) => {
+      const map = {};
+      data.forEach((q) => { if (q) map[q.symbol] = q; });
+      setQuotes(map);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, [watchlist.join(',')]);
 
+  const up = Object.values(quotes).filter(q => q.changePct >= 0).length;
+  const down = Object.values(quotes).filter(q => q.changePct < 0).length;
+
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#0f0f0f', borderRight: '1px solid #1e1e1e' }}>
-
-      {/* Header */}
-      <div style={{ padding: '8px 10px', borderBottom: '1px solid #1e1e1e', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#555', letterSpacing: 2 }}>WATCHLIST</span>
-        <span style={{ fontSize: 9, color: '#444' }}>{watchlist.length}</span>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#080808', borderRight: '1px solid #111' }}>
+      <style>{`@keyframes skeleton{0%,100%{opacity:0.4}50%{opacity:1}}`}</style>
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid #111', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#444', letterSpacing: 1 }}>WATCHLIST</span>
+        <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#333' }}>{watchlist.length}</span>
       </div>
 
-      {/* Column headers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 52px', padding: '4px 8px', borderBottom: '1px solid #1a1a1a' }}>
-        {['SYMBOL', 'LTP', 'CHG%'].map((h) => (
-          <span key={h} style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#444', letterSpacing: 1, textAlign: h === 'SYMBOL' ? 'left' : 'right' }}>{h}</span>
-        ))}
-      </div>
-
-      {/* Stocks list */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {watchlist.map((sym) => {
-          const q = quotes[sym];
-          const isUp = q ? q.changePct >= 0 : null;
-          const isActive = sym === activeSymbol;
-
-          return (
-            <div
-              key={sym}
-              onClick={() => setActiveSymbol(sym)}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 70px 52px',
-                padding: '6px 8px',
-                cursor: 'pointer',
-                borderBottom: '1px solid rgba(30,30,30,0.6)',
-                background: isActive ? 'rgba(245,166,35,0.08)' : 'transparent',
-                borderLeft: isActive ? '2px solid #f5a623' : '2px solid transparent',
-                transition: 'background 0.1s',
-              }}
-            >
-              <div>
-                <div style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 600, color: isActive ? '#f5a623' : '#e0e0e0' }}>{sym}</div>
-                {q?.sector && <div style={{ fontSize: 9, color: '#555', marginTop: 1 }}>{q.sector.slice(0, 14)}</div>}
+        {loading ? (
+          Array(watchlist.length).fill(0).map((_, i) => <SkeletonRow key={i} />)
+        ) : (
+          watchlist.map((sym) => {
+            const q = quotes[sym];
+            const isActive = sym === activeSymbol;
+            const isUp = q ? q.changePct >= 0 : true;
+            return (
+              <div key={sym}
+                onClick={() => { setActiveSymbol(sym); setActiveTab('chart'); }}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderBottom: '1px solid #0d0d0d', cursor: 'pointer', background: isActive ? '#111' : 'transparent', borderLeft: isActive ? '2px solid #f5a623' : '2px solid transparent', transition: 'all 0.1s' }}>
+                <div>
+                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: isActive ? 700 : 500, color: isActive ? '#f5a623' : '#e8e8e8' }}>{sym}</div>
+                  {q && <div style={{ fontSize: 9, color: '#333', fontFamily: 'JetBrains Mono', marginTop: 2 }}>{q.name?.slice(0, 12)}</div>}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 600, color: q ? (isUp ? '#e8e8e8' : '#e8e8e8') : '#333' }}>
+                    {q ? q.ltp?.toFixed(2) : '...'}
+                  </div>
+                  {q && <div style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: isUp ? '#00d084' : '#ff4444', marginTop: 2 }}>
+                    {isUp ? '+' : ''}{q.changePct?.toFixed(2)}%
+                  </div>}
+                </div>
               </div>
-              <div style={{ textAlign: 'right', fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 500, color: isUp === null ? '#666' : isUp ? '#00d084' : '#ff4444', alignSelf: 'center' }}>
-                {q ? q.ltp?.toFixed(2) : '—'}
-              </div>
-              <div style={{ textAlign: 'right', fontFamily: 'JetBrains Mono', fontSize: 10, color: isUp === null ? '#555' : isUp ? '#00d084' : '#ff4444', alignSelf: 'center' }}>
-                {q ? `${isUp ? '+' : ''}${q.changePct?.toFixed(2)}%` : '—'}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {/* Market breadth */}
-      <div style={{ padding: '8px 10px', borderTop: '1px solid #1e1e1e' }}>
-        <div style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#555', marginBottom: 6, letterSpacing: 1 }}>MARKET BREADTH</div>
-        {(() => {
-          const total = watchlist.length;
-          const up = watchlist.filter((s) => (quotes[s]?.changePct || 0) >= 0).length;
-          const down = total - up;
-          const upPct = total ? (up / total) * 100 : 50;
-          return (
-            <>
-              <div style={{ display: 'flex', borderRadius: 2, overflow: 'hidden', height: 4, marginBottom: 4 }}>
-                <div style={{ width: `${upPct}%`, background: '#00d084' }} />
-                <div style={{ flex: 1, background: '#ff4444' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 9, color: '#00d084', fontFamily: 'JetBrains Mono' }}>▲ {up}</span>
-                <span style={{ fontSize: 9, color: '#ff4444', fontFamily: 'JetBrains Mono' }}>▼ {down}</span>
-              </div>
-            </>
-          );
-        })()}
+      <div style={{ padding: '8px 12px', borderTop: '1px solid #111' }}>
+        <div style={{ fontSize: 9, color: '#333', fontFamily: 'JetBrains Mono', marginBottom: 5, letterSpacing: 1 }}>MARKET BREADTH</div>
+        <div style={{ height: 4, background: '#1a1a1a', borderRadius: 2, overflow: 'hidden', display: 'flex' }}>
+          <div style={{ width: (up / Math.max(up + down, 1)) * 100 + '%', background: '#00d084', transition: 'width 1s ease' }} />
+          <div style={{ flex: 1, background: '#ff4444' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          <span style={{ fontSize: 9, color: '#00d084', fontFamily: 'JetBrains Mono' }}>▲ {up}</span>
+          <span style={{ fontSize: 9, color: '#ff4444', fontFamily: 'JetBrains Mono' }}>▼ {down}</span>
+        </div>
       </div>
     </div>
   );
