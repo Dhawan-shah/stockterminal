@@ -1,55 +1,53 @@
 import { create } from 'zustand';
 
-export const useStore = create((set) => ({
-  // Active symbol being viewed
+export const useStore = create((set, get) => ({
   activeSymbol: 'RELIANCE',
-  setActiveSymbol: (sym) => set({ activeSymbol: sym.toUpperCase() }),
+  activeTab: 'chart',
+  searchOpen: false,
+  wsConnected: false,
 
-  // Live quote data keyed by symbol
+  watchlist: [
+    'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK',
+    'WIPRO', 'SBIN', 'BAJFINANCE', 'ADANIENT', 'HINDUNILVR',
+  ],
+
   quotes: {},
-  updateQuote: (symbol, data) =>
-    set((s) => ({ quotes: { ...s.quotes, [symbol]: data } })),
-
-  // Watchlist
-  watchlist: ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'WIPRO', 'SBIN', 'BAJFINANCE', 'ADANIENT', 'HINDUNILVR'],
-  addToWatchlist: (sym) =>
-    set((s) => ({ watchlist: [...new Set([...s.watchlist, sym.toUpperCase()])] })),
-  removeFromWatchlist: (sym) =>
-    set((s) => ({ watchlist: s.watchlist.filter((s2) => s2 !== sym) })),
-
-  // Indices data
   indices: [],
+  fundamentals: {},
+  candles: {},
+
+  setActiveSymbol: (sym) => set({ activeSymbol: sym }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
+  setSearchOpen: (v) => set({ searchOpen: v }),
+  setWsConnected: (v) => set({ wsConnected: v }),
   setIndices: (indices) => set({ indices }),
 
-  // Gainers/losers
-  gainers: [],
-  losers: [],
-  setGainers: (g) => set({ gainers: g }),
-  setLosers: (l) => set({ losers: l }),
+  // Supports both:
+  // setQuotes({ RELIANCE: {...}, TCS: {...} })  — full replace / bulk set
+  // setQuotes(prev => ({ ...prev, RELIANCE: {...} }))  — functional merge
+  setQuotes: (quotesOrFn) => set((state) => ({
+    quotes: typeof quotesOrFn === 'function'
+      ? quotesOrFn(state.quotes)
+      : { ...state.quotes, ...quotesOrFn },
+  })),
 
-  // Fundamentals cache
-  fundamentals: {},
-  setFundamentals: (sym, data) =>
-    set((s) => ({ fundamentals: { ...s.fundamentals, [sym]: data } })),
+  updateQuote: (symbol, data) => set((state) => ({
+    quotes: { ...state.quotes, [symbol]: { ...(state.quotes[symbol] || {}), ...data } },
+  })),
 
-  // Historical candles cache
-  candles: {},
-  setCandles: (sym, data) =>
-    set((s) => ({ candles: { ...s.candles, [sym]: data } })),
+  setFundamentals: (sym, data) => set((state) => ({
+    fundamentals: { ...state.fundamentals, [sym]: data },
+  })),
 
-  // Chart settings
-  chartInterval: '1Y',
-  setChartInterval: (i) => set({ chartInterval: i }),
+  setCandles: (sym, data) => set((state) => ({
+    candles: { ...state.candles, [sym]: data },
+  })),
 
-  // Active tab
-  activeTab: 'chart',
-  setActiveTab: (t) => set({ activeTab: t }),
+  addToWatchlist: (sym) => set((state) => ({
+    watchlist: state.watchlist.includes(sym) ? state.watchlist : [...state.watchlist, sym],
+  })),
 
-  // WebSocket status
-  wsConnected: false,
-  setWsConnected: (v) => set({ wsConnected: v }),
-
-  // Search
-  searchOpen: false,
-  setSearchOpen: (v) => set({ searchOpen: v }),
+  removeFromWatchlist: (sym) => set((state) => ({
+    watchlist: state.watchlist.filter(s => s !== sym),
+  })),
 }));

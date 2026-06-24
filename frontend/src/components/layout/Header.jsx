@@ -17,8 +17,10 @@ function MarketStatus() {
   }, []);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <div style={{ width: 7, height: 7, borderRadius: '50%', background: open ? '#00d084' : '#ff4444', boxShadow: '0 0 8px ' + (open ? '#00d084' : '#ff4444'), animation: open ? 'hpulse 2s infinite' : 'none' }} />
-      <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono', color: open ? '#00d084' : '#ff4444', fontWeight: 600, letterSpacing: 1 }}>{open ? 'MARKET OPEN' : 'MARKET CLOSED'}</span>
+      <div style={{ width: 7, height: 7, borderRadius: '50%', background: open ? '#22d3a5' : '#f43f5e', boxShadow: '0 0 10px ' + (open ? '#22d3a5' : '#f43f5e'), animation: 'pulse 2s infinite' }} />
+      <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: open ? '#22d3a5' : '#f43f5e', fontWeight: 700, letterSpacing: '0.1em' }}>
+        {open ? 'MARKET OPEN' : 'MARKET CLOSED'}
+      </span>
     </div>
   );
 }
@@ -26,12 +28,17 @@ function MarketStatus() {
 function Clock() {
   const [time, setTime] = useState('');
   useEffect(() => {
-    const tick = () => setTime(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false }) + ' IST');
+    const tick = () => setTime(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false }));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
-  return <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono', color: '#555', letterSpacing: 1 }}>{time}</span>;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 10px', background: '#0a0a15', borderRadius: 4, border: '1px solid #0e0e22' }}>
+      <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono', color: '#3a3a6a', letterSpacing: '0.05em' }}>{time}</span>
+      <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#2a2a4a' }}>IST</span>
+    </div>
+  );
 }
 
 export default function Header() {
@@ -45,54 +52,62 @@ export default function Header() {
   }, []);
 
   return (
-    <div style={{ background: '#080808', borderBottom: '1px solid #111', flexShrink: 0 }}>
-      <style>{`@keyframes hpulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+    <div style={{ background: '#030307', borderBottom: '1px solid #0e0e18', flexShrink: 0 }}>
 
       {/* Top bar */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '0 16px', height: 44, borderBottom: '1px solid #111' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 24 }}>
-          <div style={{ width: 24, height: 24, background: 'linear-gradient(135deg,#f5a623,#e8960f)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 900, color: '#000' }}>▶</span>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '0 14px', height: 46, borderBottom: '1px solid #0a0a14' }}>
+
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 20 }}>
+          <div style={{ width: 28, height: 28, background: '#f5a623', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px rgba(245,166,35,0.4)' }}>
+            <span style={{ fontSize: 14, fontWeight: 900, color: '#000' }}>▶</span>
           </div>
-          <span style={{ fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: 800, color: '#f5a623', letterSpacing: 3 }}>STOCKTERM</span>
+          <div>
+            <div style={{ fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: 800, color: '#f5a623', letterSpacing: '0.25em', lineHeight: 1 }}>STOCKTERM</div>
+            <div style={{ fontFamily: 'JetBrains Mono', fontSize: 7, color: '#2a2a4a', letterSpacing: '0.15em', marginTop: 1 }}>INDIA TERMINAL</div>
+          </div>
         </div>
 
-        <div style={{ width: 1, height: 20, background: '#1a1a1a', marginRight: 16 }} />
+        <div style={{ width: 1, height: 22, background: '#0e0e22', marginRight: 16 }} />
         <MarketStatus />
+        <div style={{ width: 1, height: 22, background: '#0e0e22', margin: '0 16px' }} />
 
-        <div style={{ marginLeft: 16, display: 'flex', alignItems: 'center', gap: 5 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: wsConnected ? '#00d084' : '#444', animation: wsConnected ? 'hpulse 2s infinite' : 'none' }} />
-          <span style={{ fontSize: 9, color: wsConnected ? '#00d084' : '#444', fontFamily: 'JetBrains Mono' }}>LIVE</span>
+        {/* WS status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', background: wsConnected ? '#22d3a5' : '#3a3a5c', animation: wsConnected ? 'pulse 2s infinite' : 'none' }} />
+          <span style={{ fontSize: 9, color: wsConnected ? '#22d3a5' : '#3a3a5c', fontFamily: 'JetBrains Mono', letterSpacing: '0.1em' }}>LIVE</span>
         </div>
 
         <div style={{ flex: 1 }} />
+
         <Clock />
 
+        {/* Search button */}
         <button onClick={() => setSearchOpen(true)}
-          style={{ marginLeft: 16, display: 'flex', alignItems: 'center', gap: 8, padding: '5px 14px', background: '#111', border: '1px solid #1e1e1e', borderRadius: 5, cursor: 'pointer', color: '#555', fontFamily: 'JetBrains Mono', fontSize: 11, transition: 'all 0.15s' }}
-          onMouseEnter={e => { e.currentTarget.style.border = '1px solid #333'; e.currentTarget.style.color = '#888'; }}
-          onMouseLeave={e => { e.currentTarget.style.border = '1px solid #1e1e1e'; e.currentTarget.style.color = '#555'; }}>
-          <span>⌕</span>
+          style={{ marginLeft: 12, display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: '#0a0a18', border: '1px solid #1a1a30', borderRadius: 6, cursor: 'pointer', color: '#3a3a6a', fontFamily: 'JetBrains Mono', fontSize: 11, transition: 'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#f5a623'; e.currentTarget.style.color = '#f5a623'; e.currentTarget.style.boxShadow = '0 0 12px rgba(245,166,35,0.15)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a1a30'; e.currentTarget.style.color = '#3a3a6a'; e.currentTarget.style.boxShadow = 'none'; }}>
+          <span style={{ fontSize: 13 }}>⌕</span>
           <span>Search symbol</span>
-          <span style={{ fontSize: 9, padding: '1px 5px', background: '#1a1a1a', borderRadius: 3, color: '#333' }}>⌘K</span>
+          <span style={{ fontSize: 9, padding: '1px 6px', background: '#0d0d20', borderRadius: 3, color: '#2a2a4a', border: '1px solid #1a1a30' }}>⌘K</span>
         </button>
       </div>
 
       {/* Indices strip */}
-      <div style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
+      <div style={{ height: 38, display: 'flex', alignItems: 'center', padding: '0 14px', overflowX: 'auto', scrollbarWidth: 'none', gap: 0 }}>
         {indices.length === 0 ? (
           Array(6).fill(0).map((_, i) => (
-            <div key={i} style={{ width: 140, height: 20, background: '#111', borderRadius: 3, marginRight: 28, animation: 'hpulse 1.5s infinite' }} />
+            <div key={i} style={{ width: 140, height: 18, background: '#0a0a14', borderRadius: 3, marginRight: 28, animation: 'shimmer 1.5s infinite' }} />
           ))
         ) : (
-          indices.map((idx) => (
-            <div key={idx.name} style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 28, flexShrink: 0, borderRight: '1px solid #111', marginRight: 28 }}>
-              <span style={{ fontSize: 9, color: '#444', fontFamily: 'JetBrains Mono', letterSpacing: 1 }}>{idx.name}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'JetBrains Mono', color: '#e8e8e8' }}>
+          indices.map((idx, i) => (
+            <div key={idx.name} style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 24, marginRight: 24, borderRight: i < indices.length - 1 ? '1px solid #0e0e18' : 'none', flexShrink: 0 }}>
+              <span style={{ fontSize: 9, color: '#2a2a4a', fontFamily: 'JetBrains Mono', letterSpacing: '0.08em' }}>{idx.name}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, fontFamily: 'JetBrains Mono', color: '#c8c8e8', letterSpacing: '0.02em' }}>
                 {idx.last?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </span>
-              <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono', color: idx.changePct >= 0 ? '#00d084' : '#ff4444' }}>
-                {idx.changePct >= 0 ? '▲' : '▼'} {Math.abs(idx.changePct || 0).toFixed(2)}%
+              <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono', color: (idx.changePct || 0) >= 0 ? '#22d3a5' : '#f43f5e', fontWeight: 600 }}>
+                {(idx.changePct || 0) >= 0 ? '▲' : '▼'} {Math.abs(idx.changePct || 0).toFixed(2)}%
               </span>
             </div>
           ))

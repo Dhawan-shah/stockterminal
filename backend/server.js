@@ -17,6 +17,9 @@ const screenerRoutes = require('./routes/screener');
 
 const { startPriceBroadcaster } = require('./services/priceBroadcaster');
 
+// Start cache warming immediately on boot — data ready before first user hits it
+require('./services/cacheWarmer');
+
 const app = express();
 const server = http.createServer(app);
 

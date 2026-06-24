@@ -1,12 +1,15 @@
 import { useStore } from '../../store/useStore';
 import { useEffect, useState } from 'react';
-import { fetchBatch } from '../../utils/api';
+import { fetchQuote } from '../../utils/api';
 
-function SkeletonRow() {
+function Skeleton() {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderBottom: '1px solid #0d0d0d' }}>
-      <div style={{ width: 60, height: 10, background: '#1a1a1a', borderRadius: 3, animation: 'skeleton 1.5s infinite' }} />
-      <div style={{ width: 50, height: 10, background: '#1a1a1a', borderRadius: 3, animation: 'skeleton 1.5s infinite' }} />
+    <div style={{ padding: '10px 12px', borderBottom: '1px solid #080810' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div style={{ width: 55, height: 9, background: '#0e0e1e', borderRadius: 2, animation: 'shimmer 1.5s infinite' }} />
+        <div style={{ width: 45, height: 9, background: '#0e0e1e', borderRadius: 2, animation: 'shimmer 1.5s infinite' }} />
+      </div>
+      <div style={{ width: 80, height: 7, background: '#0a0a14', borderRadius: 2, marginTop: 5, animation: 'shimmer 1.5s infinite' }} />
     </div>
   );
 }
@@ -16,66 +19,101 @@ export default function Watchlist() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    fetchBatch(watchlist).then((data) => {
-      const map = {};
-      data.forEach((q) => { if (q) map[q.symbol] = q; });
-      setQuotes(map);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    let cancelled = false;
+
+    // Fetch ALL symbols individually in parallel — no batch timeout bottleneck
+    const fetchAll = async () => {
+      setLoading(true);
+
+      // Fire all requests at once
+      const promises = watchlist.map(sym =>
+        fetchQuote(sym).then(q => ({ sym, q })).catch(() => ({ sym, q: null }))
+      );
+
+      // Process each result as it arrives — update UI immediately per stock
+      promises.forEach(p =>
+        p.then(({ sym, q }) => {
+          if (cancelled || !q) return;
+          setQuotes(prev => ({ ...prev, [sym]: q }));
+        })
+      );
+
+      // Set loading false after first 3 resolve
+      await Promise.race([
+        promises[0], promises[1], promises[2],
+        new Promise(r => setTimeout(r, 1500)),
+      ]);
+      if (!cancelled) setLoading(false);
+    };
+
+    fetchAll();
+
+    // Refresh prices every 15 seconds
+    const id = setInterval(fetchAll, 15000);
+    return () => { cancelled = true; clearInterval(id); };
   }, [watchlist.join(',')]);
 
-  const up = Object.values(quotes).filter(q => q.changePct >= 0).length;
-  const down = Object.values(quotes).filter(q => q.changePct < 0).length;
+  const all = Object.values(quotes);
+  const upCount = all.filter(q => q.changePct >= 0).length;
+  const downCount = all.filter(q => q.changePct < 0).length;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#080808', borderRight: '1px solid #111' }}>
-      <style>{`@keyframes skeleton{0%,100%{opacity:0.4}50%{opacity:1}}`}</style>
-      <div style={{ padding: '8px 12px', borderBottom: '1px solid #111', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#444', letterSpacing: 1 }}>WATCHLIST</span>
-        <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#333' }}>{watchlist.length}</span>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#04040b' }}>
+
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid #0a0a14', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#2a2a4a', letterSpacing: '0.1em' }}>WATCHLIST</span>
+        <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#1e1e38', background: '#0a0a18', padding: '1px 6px', borderRadius: 3, border: '1px solid #0e0e22' }}>{watchlist.length}</span>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {loading ? (
-          Array(watchlist.length).fill(0).map((_, i) => <SkeletonRow key={i} />)
-        ) : (
-          watchlist.map((sym) => {
-            const q = quotes[sym];
-            const isActive = sym === activeSymbol;
-            const isUp = q ? q.changePct >= 0 : true;
-            return (
-              <div key={sym}
-                onClick={() => { setActiveSymbol(sym); setActiveTab('chart'); }}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderBottom: '1px solid #0d0d0d', cursor: 'pointer', background: isActive ? '#111' : 'transparent', borderLeft: isActive ? '2px solid #f5a623' : '2px solid transparent', transition: 'all 0.1s' }}>
-                <div>
-                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: isActive ? 700 : 500, color: isActive ? '#f5a623' : '#e8e8e8' }}>{sym}</div>
-                  {q && <div style={{ fontSize: 9, color: '#333', fontFamily: 'JetBrains Mono', marginTop: 2 }}>{q.name?.slice(0, 12)}</div>}
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 600, color: q ? (isUp ? '#e8e8e8' : '#e8e8e8') : '#333' }}>
-                    {q ? q.ltp?.toFixed(2) : '...'}
-                  </div>
-                  {q && <div style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: isUp ? '#00d084' : '#ff4444', marginTop: 2 }}>
-                    {isUp ? '+' : ''}{q.changePct?.toFixed(2)}%
-                  </div>}
+        {watchlist.map((sym) => {
+          const q = quotes[sym];
+          const active = sym === activeSymbol;
+          const isUp = q ? q.changePct >= 0 : true;
+          const chg = q ? Math.abs(q.changePct || 0).toFixed(2) : null;
+
+          // Show skeleton only if this specific stock hasn't loaded yet
+          if (!q && loading) return <Skeleton key={sym} />;
+
+          return (
+            <div key={sym}
+              onClick={() => { setActiveSymbol(sym); setActiveTab('chart'); }}
+              style={{ padding: '9px 12px', borderBottom: '1px solid #060610', cursor: 'pointer', background: active ? 'rgba(91,106,240,0.06)' : 'transparent', borderLeft: '2px solid ' + (active ? '#5b6af0' : 'transparent'), transition: 'all 0.12s' }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: active ? 700 : 500, color: active ? '#818cf8' : '#9090b0', letterSpacing: '0.04em' }}>{sym}</div>
+                <div style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 600, color: q ? '#d8d8f0' : '#2a2a4a' }}>
+                  {q ? '₹' + q.ltp?.toFixed(2) : '—'}
                 </div>
               </div>
-            );
-          })
-        )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 }}>
+                <div style={{ fontSize: 9, color: '#2a2a4a', fontFamily: 'JetBrains Mono', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>
+                  {q?.name?.slice(0, 14) || sym}
+                </div>
+                {chg ? (
+                  <div style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: isUp ? '#22d3a5' : '#f43f5e', fontWeight: 600, background: isUp ? 'rgba(34,211,165,0.08)' : 'rgba(244,63,94,0.08)', padding: '1px 5px', borderRadius: 3 }}>
+                    {isUp ? '+' : '-'}{chg}%
+                  </div>
+                ) : (
+                  <div style={{ width: 36, height: 7, background: '#0e0e1e', borderRadius: 2, animation: 'shimmer 1.5s infinite' }} />
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Market breadth */}
-      <div style={{ padding: '8px 12px', borderTop: '1px solid #111' }}>
-        <div style={{ fontSize: 9, color: '#333', fontFamily: 'JetBrains Mono', marginBottom: 5, letterSpacing: 1 }}>MARKET BREADTH</div>
-        <div style={{ height: 4, background: '#1a1a1a', borderRadius: 2, overflow: 'hidden', display: 'flex' }}>
-          <div style={{ width: (up / Math.max(up + down, 1)) * 100 + '%', background: '#00d084', transition: 'width 1s ease' }} />
-          <div style={{ flex: 1, background: '#ff4444' }} />
+      <div style={{ padding: '8px 12px', borderTop: '1px solid #0a0a14' }}>
+        <div style={{ fontSize: 8, color: '#1e1e38', fontFamily: 'JetBrains Mono', letterSpacing: '0.1em', marginBottom: 5 }}>BREADTH</div>
+        <div style={{ height: 3, background: '#0a0a18', borderRadius: 2, overflow: 'hidden', display: 'flex' }}>
+          <div style={{ width: (upCount / Math.max(upCount + downCount, 1)) * 100 + '%', background: '#22d3a5', transition: 'width 1s ease' }} />
+          <div style={{ flex: 1, background: '#f43f5e' }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-          <span style={{ fontSize: 9, color: '#00d084', fontFamily: 'JetBrains Mono' }}>▲ {up}</span>
-          <span style={{ fontSize: 9, color: '#ff4444', fontFamily: 'JetBrains Mono' }}>▼ {down}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+          <span style={{ fontSize: 9, color: '#22d3a5', fontFamily: 'JetBrains Mono' }}>▲ {upCount}</span>
+          <span style={{ fontSize: 9, color: '#f43f5e', fontFamily: 'JetBrains Mono' }}>▼ {downCount}</span>
         </div>
       </div>
     </div>
