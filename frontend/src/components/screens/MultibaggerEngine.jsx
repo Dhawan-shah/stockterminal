@@ -142,25 +142,48 @@ function ProgressBar({ label, value, max, color, suffix }) {
 
 function NewsCard({ news }) {
   const cat = NEWS_CATEGORIES[news.type] || NEWS_CATEGORIES.general;
-  const sentiment = getSentiment(news.title);
+  const sentiment = news.sentiment
+    ? news.sentiment.toLowerCase().includes('bullish') ? 'bullish'
+      : news.sentiment.toLowerCase().includes('bearish') ? 'bearish' : 'neutral'
+    : getSentiment(news.title);
   const sc = sentiment === 'bullish' ? '#00d084' : sentiment === 'bearish' ? '#ff4444' : '#888';
   const [h, setH] = useState(false);
   return (
-    <a href={news.link} target="_blank" rel="noreferrer" onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    <a href={news.link} target="_blank" rel="noreferrer"
+      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{ display: 'flex', gap: 10, padding: '10px 12px', background: h ? '#141414' : '#0d0d0d', borderRadius: 6, border: '1px solid #1a1a1a', borderLeft: '3px solid ' + sc, textDecoration: 'none', transition: 'background 0.15s' }}>
       <div style={{ flexShrink: 0, width: 28, height: 28, background: cat.color + '18', border: '1px solid ' + cat.color + '33', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>{cat.icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 11, fontFamily: 'JetBrains Mono', color: '#e0e0e0', lineHeight: 1.5, marginBottom: 5 }}>{news.title}</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 11, fontFamily: 'JetBrains Mono', color: '#e0e0e0', lineHeight: 1.5, marginBottom: 4 }}>{news.title}</div>
+        {news.summary && (
+          <div style={{ fontSize: 9, fontFamily: 'JetBrains Mono', color: '#444', lineHeight: 1.5, marginBottom: 5 }}>{news.summary.slice(0, 120)}...</div>
+        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: 8, padding: '1px 6px', borderRadius: 2, background: cat.color + '18', color: cat.color, border: '1px solid ' + cat.color + '33', fontFamily: 'JetBrains Mono', fontWeight: 700 }}>{cat.label}</span>
-          <span style={{ fontSize: 8, padding: '1px 6px', borderRadius: 2, background: sc + '18', color: sc, border: '1px solid ' + sc + '33', fontFamily: 'JetBrains Mono', fontWeight: 700 }}>{sentiment.toUpperCase()}</span>
+          <span style={{ fontSize: 8, padding: '1px 6px', borderRadius: 2, background: sc + '18', color: sc, border: '1px solid ' + sc + '33', fontFamily: 'JetBrains Mono', fontWeight: 700 }}>
+            {sentiment === 'bullish' ? '▲ BULLISH' : sentiment === 'bearish' ? '▼ BEARISH' : '● NEUTRAL'}
+            {news.sentimentScore ? ' ' + (news.sentimentScore > 0 ? '+' : '') + news.sentimentScore.toFixed(2) : ''}
+          </span>
+          {news.topics?.slice(0, 2).map(t => (
+            <span key={t} style={{ fontSize: 8, padding: '1px 6px', borderRadius: 2, background: '#0d0d0d', color: '#444', border: '1px solid #1a1a1a', fontFamily: 'JetBrains Mono' }}>{t.replace(/_/g, ' ').toUpperCase()}</span>
+          ))}
           <span style={{ fontSize: 8, color: '#444', fontFamily: 'JetBrains Mono' }}>{news.publisher}</span>
           <span style={{ fontSize: 8, color: '#333', fontFamily: 'JetBrains Mono' }}>{timeAgo(news.publishedAt)}</span>
         </div>
+        {news.tickers?.length > 0 && (
+          <div style={{ display: 'flex', gap: 4, marginTop: 5, flexWrap: 'wrap' }}>
+            {news.tickers.slice(0, 4).map(t => (
+              <span key={t.ticker} style={{ fontSize: 8, padding: '1px 5px', borderRadius: 2, background: '#0a0a0a', color: t.sentiment?.includes('Bullish') ? '#00d084' : t.sentiment?.includes('Bearish') ? '#ff4444' : '#555', fontFamily: 'JetBrains Mono', border: '1px solid #141414' }}>
+                {t.ticker} {t.sentiment?.includes('Bullish') ? '▲' : t.sentiment?.includes('Bearish') ? '▼' : '●'}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </a>
   );
 }
+ 
 
 // MODULE 1: Goldman Sachs
 function GoldmanScreener({ q, r, fundamentals }) {
